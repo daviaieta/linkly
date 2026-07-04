@@ -1,104 +1,208 @@
 # 🔗 Linkly API
 
-Uma API REST para encurtamento de URLs desenvolvida com **Node.js**, **Fastify** e **SQLite**.
-
-Este projeto faz parte do meu estudo de backend, com foco em construção de APIs REST, validação de dados, persistência, tratamento de erros, testes automatizados e boas práticas de Git/GitHub.
+API REST para encurtamento de URLs, construída com **Node.js**, **Fastify**, **Prisma 7** e **SQLite**.
 
 ---
 
-## 🚀 Objetivos
+## ✨ Funcionalidades
 
-- Construir uma API REST do zero.
-- Aprender Fastify na prática.
-- Trabalhar com SQLite via **Prisma ORM**.
-- Aplicar validação utilizando JSON Schema.
-- Implementar tratamento global de erros.
-- Escrever testes com `node:test`.
-- Praticar Git e GitHub utilizando um fluxo próximo ao de projetos reais.
+- ✅ Criar URL encurtada (`POST /urls`)
+- ✅ Redirecionar pelo código curto (`GET /:code`)
+- ✅ Contabilizar acessos (cliques incrementados a cada redirect)
+- ✅ Consultar estatísticas (`GET /urls/:code/stats`)
+- ✅ Listar URLs cadastradas (`GET /urls`)
 
----
+## 🚧 Em aberto
 
-## 🛠️ Tecnologias
-
-- Node.js 22+
-- TypeScript (strict, ESM)
-- Fastify 5
-- SQLite (gerenciado pelo Prisma)
-- Prisma 7 (ORM e migrations)
-- Nano ID
-- JSON Schema
-- node:test
+- Validação de entrada com JSON Schema
+- Error handler global
+- Testes automatizados com `node:test`
 
 ---
 
-## 📂 Estrutura do projeto
+## 🛠️ Stack
+
+- **Node.js 22+** (ESM)
+- **TypeScript** (strict)
+- **Fastify 5**
+- **Prisma 7** com driver adapter `better-sqlite3`
+- **nanoid** (geração dos códigos curtos de 6 caracteres)
+- **SQLite** (arquivo local em `prisma/dev.db`)
+
+---
+
+## 📂 Estrutura
 
 ```
-linkly-api/
+linkly/
 ├── src/
-│   ├── server.ts        # bootstrap Fastify
-│   ├── routes/          # registro de rotas (sem lógica)
-│   ├── controllers/     # handlers HTTP (request/response)
-│   ├── services/        # regras de negócio (orquestra Prisma)
-│   ├── lib/             # cliente Prisma, error classes, error-handler
-│   └── schemas/         # JSON Schemas
+│   ├── server.ts              # bootstrap do Fastify + dotenv
+│   ├── routes/                # registro de rotas
+│   ├── controllers/           # handlers HTTP
+│   ├── services/              # regras de negócio
+│   ├── repositories/          # acesso ao Prisma
+│   └── lib/                   # cliente Prisma
 ├── prisma/
-│   ├── schema.prisma    # model Url
-│   └── migrations/      # migrações versionadas
-├── test/
-├── routes.http
-├── README.md
-├── project.md
+│   ├── schema.prisma          # model Url
+│   └── migrations/            # migrações versionadas
+├── .env                       # DATABASE_URL (não versionado)
+├── .env.example               # template versionado
 └── package.json
 ```
 
----
-
-## 📌 Funcionalidades
-
-- [ ] Criar URL encurtada
-- [ ] Redirecionar utilizando o código curto
-- [ ] Contabilizar acessos
-- [ ] Consultar estatísticas
-- [ ] Listar URLs cadastradas
-- [ ] Validação com JSON Schema
-- [ ] Tratamento global de erros
-- [ ] Testes automatizados
+Camadas: **route → controller → service → repository → Prisma**. Cada camada só conhece a imediatamente abaixo.
 
 ---
 
-## 📖 Aprendizados
+## ⚙️ Setup
 
-Durante o desenvolvimento serão registrados estudos sobre:
+```bash
+# 1. Instalar dependências
+npm install
 
-- REST API
-- Fastify
-- SQLite
-- JSON Schema
-- Git
-- GitHub
-- Testes
-- Arquitetura de projetos
+# 2. Criar o .env a partir do exemplo
+cp .env.example .env
+
+# 3. Rodar a migration (cria prisma/dev.db e a tabela urls)
+npx prisma migrate dev
+
+# 4. Subir o servidor em modo watch
+npm run dev
+```
+
+O servidor sobe em `http://localhost:3333`.
+
+### Scripts disponíveis
+
+| Script              | O que faz                                     |
+| ------------------- | --------------------------------------------- |
+| `npm run dev`       | Sobe o servidor com `tsx watch` (reload auto) |
+| `npm run start`     | Sobe o servidor (sem watch)                   |
+| `npm run typecheck` | `tsc --noEmit`                                |
+| `npm run test`      | Roda a suíte de testes com `node:test`        |
+| `npm run db:migrate`| Aplica/cria migrations                        |
+| `npm run db:studio` | Abre o Prisma Studio                          |
+| `npm run db:generate` | Regenera o client do Prisma                 |
 
 ---
 
-## 📅 Roadmap
+## 📡 Endpoints
 
-- [x] Configuração inicial
-- [x] Servidor Fastify
-- [x] Configurar TypeScript (strict + ESM)
-- [x] Adicionar Prisma 7 e SQLite
-- [x] Migration inicial do banco
-- [ ] Repository / Service layer (`src/services/`)
-- [ ] Endpoint `POST /urls`
-- [ ] Endpoint `GET /:code`
-- [ ] Endpoint `GET /urls/:code/stats`
-- [ ] Error Handler
-- [ ] Testes
-- [ ] Publicação da versão `v1.0.0`
+Base URL: `http://localhost:3333`
+
+### `POST /urls`
+
+Cria uma URL encurtada.
+
+**Request**
+```json
+{
+  "originalUrl": "https://www.example.com/artigo-muito-longo"
+}
+```
+
+**Response — `201 Created`**
+```json
+{
+  "shortCode": "aB3xY9",
+  "shortUrl": "http://localhost:3333/aB3xY9",
+  "originalUrl": "https://www.example.com/artigo-muito-longo",
+  "createdAt": "2026-07-04T15:30:00.000Z"
+}
+```
+
+### `GET /:code`
+
+Redireciona para a URL original. Incrementa o contador de cliques.
+
+**Response — `302 Found`** (header `Location` aponta para a URL original)
+
+**Response — `404 Not Found`** quando o código não existe:
+```json
+{ "message": "URL not found" }
+```
+
+### `GET /urls/:code/stats`
+
+Retorna estatísticas de uma URL.
+
+**Response — `200 OK`**
+```json
+{
+  "shortCode": "aB3xY9",
+  "originalUrl": "https://www.example.com/artigo-muito-longo",
+  "clicks": 12,
+  "createdAt": "2026-07-04T15:30:00.000Z"
+}
+```
+
+**Response — `404 Not Found`** quando o código não existe.
+
+### `GET /urls`
+
+Lista todas as URLs cadastradas (debug).
+
+**Response — `200 OK`**
+```json
+[
+  {
+    "id": 1,
+    "shortCode": "aB3xY9",
+    "originalUrl": "https://www.example.com/artigo-muito-longo",
+    "clicks": 12,
+    "createdAt": "2026-07-04T15:30:00.000Z"
+  }
+]
+```
+
+---
+
+## 🧪 Exemplos com cURL
+
+```bash
+# Criar
+curl -X POST http://localhost:3333/urls \
+  -H "Content-Type: application/json" \
+  -d '{"originalUrl":"https://www.example.com/muito-longo"}'
+
+# Redirecionar (não use -L se quiser ver o 302)
+curl -i http://localhost:3333/aB3xY9
+
+# Stats
+curl http://localhost:3333/urls/aB3xY9/stats
+
+# Listar tudo
+curl http://localhost:3333/urls
+```
+
+---
+
+## 🗃️ Modelo de dados
+
+```prisma
+model Url {
+  id          Int      @id @default(autoincrement())
+  shortCode   String   @unique
+  originalUrl String
+  clicks      Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  @@map("urls")
+}
+```
+
+---
+
+## 🔐 Variáveis de ambiente
+
+Crie um `.env` (copiando de `.env.example`):
+
+```env
+DATABASE_URL="file:./dev.db"
+```
 
 ---
 
 ## 📄 Licença
 
-Projeto desenvolvido exclusivamente para fins de estudo.
+Projeto de estudo. Sem licença formal.
