@@ -1,3 +1,4 @@
+import "dotenv/config"; // precisa vir ANTES de qualquer import que use o Prisma
 import { fastify } from "fastify";
 import { urlRoutes } from "./routes/url.routes";
 

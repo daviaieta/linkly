@@ -1,8 +1,9 @@
-import type { FastifyInstance } from "fastify";
-import { listUrls } from "../controllers/url.controller";
+import { FastifyInstance } from "fastify";
+import * as urlController from "../controllers/url.controller";
 
-export async function urlRoutes(app: FastifyInstance) {
-  app.get("/urls", async () => {
-    return listUrls();
-  });
-}
+export const urlRoutes = async (app: FastifyInstance) => {
+  app.post("/urls", urlController.create);
+  app.get("/:code", urlController.redirect);
+  app.get("/urls/:code/stats", urlController.getStats);
+  app.get("/urls", urlController.list);
+};
