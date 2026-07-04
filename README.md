@@ -16,7 +16,6 @@ API REST para encurtamento de URLs, construída com **Node.js**, **Fastify**, **
 
 - Validação de entrada com JSON Schema
 - Error handler global
-- Testes automatizados com `node:test`
 
 ---
 
