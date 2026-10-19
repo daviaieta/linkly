@@ -10,7 +10,7 @@
     "type": "git",
     "url": "git+https://github.com/daviacarvalho/linkly.git"
   },
-  "license": "ISC",
+  "license": "MIT",
   "author": "",
   "type": "module",
   "directories": {
